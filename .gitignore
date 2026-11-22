@@ -1,0 +1,11 @@
+# Neutralino 构建产物与运行时二进制（neu update 可重新下载）
+bin/
+dist/
+.tmp/
+*.log
+
+# 打包后的交付物（通过 GitHub Releases 分发，不入库）
+NixieClock.exe
+
+# Neutralino 客户端库（neu update 下载）
+resources/js/neutralino.js
