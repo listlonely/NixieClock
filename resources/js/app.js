@@ -6,7 +6,7 @@ const HAS_NL = typeof window.NL_PORT !== 'undefined';
 if (HAS_NL) Neutralino.init();
 
 /* ============ 顶部常量（按需修改） ============ */
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 // 版本清单 URL：返回 JSON {"version":"1.1.0","url":"https://.../下载页"}；留空则提示未配置
 const UPDATE_URL = '';
 const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
@@ -317,7 +317,7 @@ async function updateFullBtn() {
 window.addEventListener('mousedown', (e) => {
   if (e.button !== 0 || fsState) return;
   if (e.target.closest('#controls, #toast')) return;
-  if (HAS_NL) Neutralino.window.drag().catch(() => {});
+  if (HAS_NL) Neutralino.window.beginDrag(e.screenX, e.screenY).catch(() => {});
 });
 
 window.addEventListener('dblclick', (e) => {
