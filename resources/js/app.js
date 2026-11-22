@@ -10,6 +10,8 @@ const APP_VERSION = '1.0.0';
 // 版本清单 URL：返回 JSON {"version":"1.1.0","url":"https://.../下载页"}；留空则提示未配置
 const UPDATE_URL = '';
 const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
+// 多显示器枚举命令：每屏输出一行「是否主屏|x|y|宽|高」
+const SCREEN_PS = 'powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Screen]::AllScreens | ForEach-Object { \'{0}|{1}|{2}|{3}|{4}\' -f $_.Primary, $_.Bounds.X, $_.Bounds.Y, $_.Bounds.Width, $_.Bounds.Height }"';
 
 /* ============================================================
    七段数码管渲染器（辉光管 / 赛博 共用）
@@ -380,6 +382,7 @@ async function checkUpdate(manual = true) {
    托盘菜单：随电脑启动 / 检查更新 / 重新启动 / 退出
    ============================================================ */
 let trayStartup = false;
+let multiScreen = false; // 是否存在多显示器（决定「切换显示器」菜单项是否启用）
 
 // 解析当前 exe 真实路径（改名后依然正确）
 async function resolveExePath() {
@@ -414,17 +417,56 @@ async function setAutoStart(on) {
   }
 }
 
+// 查询所有显示器：[{primary, x, y, w, h}]
+async function getScreens() {
+  const r = await Neutralino.os.execCommand(SCREEN_PS);
+  const out = [];
+  (r.stdout || '').split(/\r?\n/).forEach(line => {
+    const m = line.trim().match(/^(True|False)\|(-?\d+)\|(-?\d+)\|(\d+)\|(\d+)$/);
+    if (m) out.push({ primary: m[1] === 'True', x: +m[2], y: +m[3], w: +m[4], h: +m[5] });
+  });
+  return out;
+}
+
+// 切换到下一块显示器：还原 → 移动 → 铺满该屏
+async function switchMonitor() {
+  if (!HAS_NL) return;
+  const screens = await getScreens();
+  if (screens.length < 2) { showToast('未检测到多显示器'); return; }
+  const pos = await Neutralino.window.getPosition().catch(() => ({ x: 0, y: 0 }));
+  const size = await Neutralino.window.getSize().catch(() => ({ width: 0, height: 0 }));
+  const cx = (pos.x || 0) + (size.width || 0) / 2;
+  const cy = (pos.y || 0) + (size.height || 0) / 2;
+  let cur = screens.findIndex(s => cx >= s.x && cx < s.x + s.w && cy >= s.y && cy < s.y + s.h);
+  if (cur < 0) cur = 0;
+  const next = screens[(cur + 1) % screens.length];
+  if (await Neutralino.window.isFullScreen().catch(() => false)) {
+    await Neutralino.window.exitFullScreen().catch(() => {});
+  }
+  if (await Neutralino.window.isMaximized().catch(() => false)) {
+    await Neutralino.window.unmaximize().catch(() => {});
+  }
+  await Neutralino.window.move(next.x, next.y).catch(() => {});
+  await Neutralino.window.setSize({ width: next.w, height: next.h }).catch(() => {});
+  await Neutralino.window.maximize().catch(() => {});
+  showToast(`已切换到屏幕 ${((cur + 1) % screens.length) + 1}（${next.w}×${next.h}）`);
+}
+
 function buildTray() {
   if (!HAS_NL) return;
+  const items = [
+    { id: 'info', text: `NixieClock v${APP_VERSION}`, isDisabled: true },
+  ];
+  if (multiScreen) items.push({ id: 'switchMon', text: '切换显示器' });
+  items.push(
+    { id: 'startup', text: '随电脑启动', isChecked: trayStartup },
+    { id: 'update', text: '检查更新' },
+    { id: 'restart', text: '重新启动' },
+    { id: 'exit', text: '退出' },
+  );
   Neutralino.os.setTray({
     icon: '/resources/icons/appIcon.png',
-    menuItems: [
-      { id: 'info', text: `NixieClock v${APP_VERSION}`, isDisabled: true },
-      { id: 'startup', text: '随电脑启动', isChecked: trayStartup },
-      { id: 'update', text: '检查更新' },
-      { id: 'restart', text: '重新启动' },
-      { id: 'exit', text: '退出' },
-    ],
+    menuItems: items,
   }).catch(() => { /* 托盘不可用时忽略 */ });
 }
 
@@ -441,6 +483,8 @@ if (HAS_NL) {
         showToast('设置失败，请重试');
       }
       buildTray();
+    } else if (id === 'switchMon') {
+      switchMonitor().catch(() => showToast('切换显示器失败'));
     } else if (id === 'update') {
       checkUpdate(true);
     } else if (id === 'restart') {
@@ -451,6 +495,7 @@ if (HAS_NL) {
   });
 
   Neutralino.events.on('ready', async () => {
+    try { multiScreen = (await getScreens()).length > 1; } catch (e) { multiScreen = false; }
     trayStartup = await isAutoStart();
     buildTray();
   });
