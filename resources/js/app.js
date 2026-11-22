@@ -1,4 +1,4 @@
-/* ============ 辉光时钟 NixieClock 主逻辑 ============ */
+﻿/* ============ 辉光时钟 NixieClock 主逻辑 ============ */
 'use strict';
 
 const $ = (s) => document.querySelector(s);
@@ -11,7 +11,7 @@ const APP_VERSION = '1.0.0';
 const UPDATE_URL = '';
 const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 // 多显示器枚举命令：每屏输出一行「是否主屏|x|y|宽|高」
-const SCREEN_PS = 'powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Screen]::AllScreens | ForEach-Object { \'{0}|{1}|{2}|{3}|{4}\' -f $_.Primary, $_.Bounds.X, $_.Bounds.Y, $_.Bounds.Width, $_.Bounds.Height }"';
+const SCREEN_PS = 'powershell -NoProfile -EncodedCommand QQBkAGQALQBUAHkAcABlACAALQBUAHkAcABlAEQAZQBmAGkAbgBpAHQAaQBvAG4AIAAnAHUAcwBpAG4AZwAgAFMAeQBzAHQAZQBtAC4AUgB1AG4AdABpAG0AZQAuAEkAbgB0AGUAcgBvAHAAUwBlAHIAdgBpAGMAZQBzADsAIABwAHUAYgBsAGkAYwAgAGMAbABhAHMAcwAgAEQAIAB7ACAAWwBEAGwAbABJAG0AcABvAHIAdAAoACIAdQBzAGUAcgAzADIALgBkAGwAbAAiACkAXQAgAHAAdQBiAGwAaQBjACAAcwB0AGEAdABpAGMAIABlAHgAdABlAHIAbgAgAGIAbwBvAGwAIABTAGUAdABQAHIAbwBjAGUAcwBzAEQAUABJAEEAdwBhAHIAZQAoACkAOwAgAH0AJwAKAFsARABdADoAOgBTAGUAdABQAHIAbwBjAGUAcwBzAEQAUABJAEEAdwBhAHIAZQAoACkACgBBAGQAZAAtAFQAeQBwAGUAIAAtAEEAcwBzAGUAbQBiAGwAeQBOAGEAbQBlACAAUwB5AHMAdABlAG0ALgBXAGkAbgBkAG8AdwBzAC4ARgBvAHIAbQBzAAoAWwBTAHkAcwB0AGUAbQAuAFcAaQBuAGQAbwB3AHMALgBGAG8AcgBtAHMALgBTAGMAcgBlAGUAbgBdADoAOgBBAGwAbABTAGMAcgBlAGUAbgBzACAAfAAgAEYAbwByAEUAYQBjAGgALQBPAGIAagBlAGMAdAAgAHsAIAAnAHsAMAB9AHwAewAxAH0AfAB7ADIAfQB8AHsAMwB9AHwAewA0AH0AJwAgAC0AZgAgACQAXwAuAFAAcgBpAG0AYQByAHkALAAgACQAXwAuAEIAbwB1AG4AZABzAC4AWAAsACAAJABfAC4AQgBvAHUAbgBkAHMALgBZACwAIAAkAF8ALgBCAG8AdQBuAGQAcwAuAFcAaQBkAHQAaAAsACAAJABfAC4AQgBvAHUAbgBkAHMALgBIAGUAaQBnAGgAdAAgAH0A';
 
 /* ============================================================
    七段数码管渲染器（辉光管 / 赛博 共用）
