@@ -9,3 +9,5 @@ NixieClock.exe
 
 # Neutralino 客户端库（neu update 下载）
 resources/js/neutralino.js
+
+*.zip
