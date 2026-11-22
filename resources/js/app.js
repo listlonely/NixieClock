@@ -6,7 +6,7 @@ const HAS_NL = typeof window.NL_PORT !== 'undefined';
 if (HAS_NL) Neutralino.init();
 
 /* ============ 顶部常量（按需修改） ============ */
-const APP_VERSION = '1.1.3';
+const APP_VERSION = '1.1.4';
 // 翻页动画时长（与 CSS 中 --flipDur 保持一致）
 const FLIP_MS = 900;
 // 版本清单 URL：返回 JSON {"version":"1.1.0","url":"https://.../下载页"}；留空则提示未配置
@@ -80,6 +80,7 @@ function makeFlipCard() {
   const card = document.createElement('div');
   card.className = 'fcard';
   card.dataset.v = '0';
+  card._landAt = 0; // 翻页落位时刻（0=无待落位）
   card.innerHTML =
     '<div class="half top"><div class="num"></div></div>' +
     '<div class="half bottom"><div class="num"></div></div>' +
@@ -103,12 +104,11 @@ function makeFlipCard() {
 function setFlip(card, nv) {
   const cur = card.dataset.v;
   if (nv === cur) return;
+  // 上一次翻转若未落位，先把静态下半补齐为上次目标值，避免上下半错位闪断
+  if (card._landAt) setDigit(card._dBot, cur);
   card.dataset.v = nv;
 
   const lt = card.querySelector('.leafTop');
-
-  clearTimeout(card._t1);
-  // 中断进行中的动画
   lt.classList.remove('run-t');
   card.classList.remove('sh-run');
 
@@ -119,13 +119,8 @@ function setFlip(card, nv) {
   void lt.offsetWidth; // 重启动画
   lt.classList.add('run-t');
   card.classList.add('sh-run');
-
-  card._t1 = setTimeout(() => {
-    // 落位：静态下半换成新值，收起翻页叶与阴影
-    setDigit(card._dBot, nv);
-    lt.classList.remove('run-t');
-    card.classList.remove('sh-run');
-  }, FLIP_MS);
+  // 落位由 tick 统一收敛：setTimeout 在窗口被遮挡/后台节流时不可靠，会导致翻页叶卡住、下半停留旧值
+  card._landAt = Date.now() + FLIP_MS;
 }
 
 const flipCards = [];
@@ -156,6 +151,16 @@ function tick() {
 
   const bodyMode = document.body.classList.contains('mode-flip') ? 'flip' : 'seg';
   if (bodyMode === 'flip') {
+    // 先收敛到期未落位的卡片（节流恢复后立即修正显示）
+    const now = Date.now();
+    for (const c of flipCards.flat()) {
+      if (c._landAt && now >= c._landAt) {
+        c._landAt = 0;
+        setDigit(c._dBot, c.dataset.v);
+        c.querySelector('.leafTop').classList.remove('run-t');
+        c.classList.remove('sh-run');
+      }
+    }
     const chars = h + m + s;
     flipCards.forEach((pair, i) => {
       setFlip(pair[0], chars[i * 2]);
