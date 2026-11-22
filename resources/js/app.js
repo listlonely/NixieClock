@@ -6,7 +6,7 @@ const HAS_NL = typeof window.NL_PORT !== 'undefined';
 if (HAS_NL) Neutralino.init();
 
 /* ============ 顶部常量（按需修改） ============ */
-const APP_VERSION = '1.1.4';
+const APP_VERSION = '1.1.5';
 // 翻页动画时长（与 CSS 中 --flipDur 保持一致）
 const FLIP_MS = 900;
 // 版本清单 URL：返回 JSON {"version":"1.1.0","url":"https://.../下载页"}；留空则提示未配置
@@ -141,6 +141,17 @@ const segView = $('#segView');
 let lastSec = -1;
 
 function tick() {
+  // 落位收敛放在最前：每 200ms 都检查，不依赖秒变化（秒变化检查会被 early-return 拦截，延迟可达 1 秒）
+  const ms = Date.now();
+  for (const c of flipCards.flat()) {
+    if (c._landAt && ms >= c._landAt) {
+      c._landAt = 0;
+      setDigit(c._dBot, c.dataset.v);
+      c.querySelector('.leafTop').classList.remove('run-t');
+      c.classList.remove('sh-run');
+    }
+  }
+
   const now = new Date();
   const h = p2(now.getHours());
   const m = p2(now.getMinutes());
@@ -151,16 +162,6 @@ function tick() {
 
   const bodyMode = document.body.classList.contains('mode-flip') ? 'flip' : 'seg';
   if (bodyMode === 'flip') {
-    // 先收敛到期未落位的卡片（节流恢复后立即修正显示）
-    const now = Date.now();
-    for (const c of flipCards.flat()) {
-      if (c._landAt && now >= c._landAt) {
-        c._landAt = 0;
-        setDigit(c._dBot, c.dataset.v);
-        c.querySelector('.leafTop').classList.remove('run-t');
-        c.classList.remove('sh-run');
-      }
-    }
     const chars = h + m + s;
     flipCards.forEach((pair, i) => {
       setFlip(pair[0], chars[i * 2]);

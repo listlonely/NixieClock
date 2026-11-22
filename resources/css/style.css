@@ -206,15 +206,18 @@ body.mode-flip .flip-view { display: flex; }
   width: auto;
 }
 .fcard::after {
-  /* 中缝：与卡底同色的 1px 切线，把字形分成上下两半 */
+  /* 中缝：与卡底同色的 1px 切线，只在翻页动画期间显示，避免常驻切断亮起的 g 段 */
   content: '';
   position: absolute;
   top: 50%; left: 0; right: 0;
   height: 1px;
   transform: translateY(-.5px);
-  background: #1f2937;
+  background: #e2e5ea;
   z-index: 9;
+  opacity: 0;
 }
+.fcard.sh-run::after { animation: seamK var(--flipDur) ease-in-out; }
+@keyframes seamK { 0% { opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; } }
 
 .half, .leaf {
   position: absolute;
