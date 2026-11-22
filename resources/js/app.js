@@ -6,7 +6,7 @@ const HAS_NL = typeof window.NL_PORT !== 'undefined';
 if (HAS_NL) Neutralino.init();
 
 /* ============ 顶部常量（按需修改） ============ */
-const APP_VERSION = '1.1.5';
+const APP_VERSION = '1.1.6';
 // 翻页动画时长（与 CSS 中 --flipDur 保持一致）
 const FLIP_MS = 900;
 // 版本清单 URL：返回 JSON {"version":"1.1.0","url":"https://.../下载页"}；留空则提示未配置
