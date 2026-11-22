@@ -6,7 +6,7 @@ const HAS_NL = typeof window.NL_PORT !== 'undefined';
 if (HAS_NL) Neutralino.init();
 
 /* ============ 顶部常量（按需修改） ============ */
-const APP_VERSION = '1.1.7';
+const APP_VERSION = '1.1.8';
 // 翻页动画时长（与 CSS 中 --flipDur 保持一致）
 const FLIP_MS = 600;
 // 版本清单 URL：返回 JSON {"version":"1.1.0","url":"https://.../下载页"}；留空则提示未配置
@@ -112,10 +112,11 @@ function setFlip(card, nv) {
   lt.classList.remove('run-t');
   card.classList.remove('sh-run');
 
-  // 经典翻页：叶正面=旧值上半，叶背面=新值下半；90° 时露出静态上半的新值
+  // 经典翻页：叶正面=旧值上半，叶背面=新值下半
+  // 静态上半保持旧值直到落位（叶转至 90° 侧棱近乎隐形时，露出的应是完整旧值，
+  // 若此处提前换新值会出现"新上半+旧下半"的乱码，与机械翻页钟不一致）
   setDigit(card._dFront, cur);
   setDigit(card._dBack, nv);
-  setDigit(card._dTop, nv);
   void lt.offsetWidth; // 重启动画
   lt.classList.add('run-t');
   card.classList.add('sh-run');
@@ -146,6 +147,8 @@ function tick() {
   for (const c of flipCards.flat()) {
     if (c._landAt && ms >= c._landAt) {
       c._landAt = 0;
+      // 落位瞬间上下半一起换新值：中段全程显示完整旧值，杜绝乱码观感
+      setDigit(c._dTop, c.dataset.v);
       setDigit(c._dBot, c.dataset.v);
       c.querySelector('.leafTop').classList.remove('run-t');
       c.classList.remove('sh-run');
