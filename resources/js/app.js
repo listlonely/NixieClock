@@ -6,7 +6,9 @@ const HAS_NL = typeof window.NL_PORT !== 'undefined';
 if (HAS_NL) Neutralino.init();
 
 /* ============ 顶部常量（按需修改） ============ */
-const APP_VERSION = '1.1.2';
+const APP_VERSION = '1.1.3';
+// 翻页动画时长（与 CSS 中 --flipDur 保持一致）
+const FLIP_MS = 900;
 // 版本清单 URL：返回 JSON {"version":"1.1.0","url":"https://.../下载页"}；留空则提示未配置
 const UPDATE_URL = '';
 const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
@@ -81,17 +83,20 @@ function makeFlipCard() {
   card.innerHTML =
     '<div class="half top"><div class="num"></div></div>' +
     '<div class="half bottom"><div class="num"></div></div>' +
-    '<div class="leaf leafTop"><div class="face front"><div class="num"></div></div><div class="face back"></div></div>';
-  // 三个显示位使用与辉光管/赛博一致的七段码
-  card._dTop = makeDigit();
-  card._dBot = makeDigit();
-  card._dLeaf = makeDigit();
+    '<div class="sh bot"></div>' +
+    '<div class="leaf leafTop"><div class="face front"><div class="num"></div></div><div class="face back"><div class="num"></div></div></div>' +
+    '<div class="sh mid"></div>' +
+    '<div class="sh dark"></div>';
+  // 四个显示位使用与辉光管/赛博一致的七段码
+  card._dTop = makeDigit();   // 静态上半：翻页开始即换新值
+  card._dBot = makeDigit();   // 静态下半：落位后才换新值
+  card._dFront = makeDigit(); // 翻页叶正面：旧值上半
+  card._dBack = makeDigit();  // 翻页叶背面：新值下半
   card.querySelector('.half.top .num').appendChild(card._dTop);
   card.querySelector('.half.bottom .num').appendChild(card._dBot);
-  card.querySelector('.face.front .num').appendChild(card._dLeaf);
-  setDigit(card._dTop, '0');
-  setDigit(card._dBot, '0');
-  setDigit(card._dLeaf, '0');
+  card.querySelector('.face.front .num').appendChild(card._dFront);
+  card.querySelector('.face.back .num').appendChild(card._dBack);
+  [card._dTop, card._dBot, card._dFront, card._dBack].forEach((d) => setDigit(d, '0'));
   return card;
 }
 
@@ -103,24 +108,24 @@ function setFlip(card, nv) {
   const lt = card.querySelector('.leafTop');
 
   clearTimeout(card._t1);
-  clearTimeout(card._t2);
-  // 中断进行中的动画，直接落位
+  // 中断进行中的动画
   lt.classList.remove('run-t');
-  card.classList.remove('impact');
+  card.classList.remove('sh-run');
 
-  // 单页 180° 翻落：页面正面是新值上半，90° 后露出背面
-  setDigit(card._dLeaf, nv);
+  // 经典翻页：叶正面=旧值上半，叶背面=新值下半；90° 时露出静态上半的新值
+  setDigit(card._dFront, cur);
+  setDigit(card._dBack, nv);
+  setDigit(card._dTop, nv);
   void lt.offsetWidth; // 重启动画
   lt.classList.add('run-t');
+  card.classList.add('sh-run');
 
   card._t1 = setTimeout(() => {
-    // 页面落位：静态层换新值 + 落页阴影闪现
-    setDigit(card._dTop, nv);
+    // 落位：静态下半换成新值，收起翻页叶与阴影
     setDigit(card._dBot, nv);
     lt.classList.remove('run-t');
-    card.classList.add('impact');
-    card._t2 = setTimeout(() => card.classList.remove('impact'), 260);
-  }, 450);
+    card.classList.remove('sh-run');
+  }, FLIP_MS);
 }
 
 const flipCards = [];

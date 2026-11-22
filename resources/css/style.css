@@ -25,9 +25,10 @@ body.mode-nixie {
 
 body.mode-flip {
   --accent: #b9bec8;
-  --seg-on: #e9ebf0;
-  --seg-off: rgba(233, 235, 240, .06);
-  background: radial-gradient(ellipse at 50% 0%, #26262b 0%, #161619 55%, #0d0d10 100%);
+  --seg-on: #fff;
+  --seg-off: rgba(255, 255, 255, .06);
+  /* 与 clockhub 翻页钟一致：纯黑背景，窗口/全屏观感一致 */
+  background: #000;
 }
 
 body.mode-cyber {
@@ -189,6 +190,7 @@ body.mode-flip .flip-view { display: flex; }
   gap: 1.4vmin;
   --cardH: clamp(110px, 28vmin, 280px);
   --cardW: calc(var(--cardH) * .64);
+  --flipDur: .9s; /* 翻页动画时长（与 app.js FLIP_MS 保持一致） */
   perspective: calc(var(--cardH) * 4);
 }
 .flip-group.small { --cardH: clamp(52px, 13vmin, 130px); }
@@ -204,14 +206,14 @@ body.mode-flip .flip-view { display: flex; }
   width: auto;
 }
 .fcard::after {
-  /* 中缝 */
+  /* 中缝：与卡底同色的 1px 切线，把字形分成上下两半 */
   content: '';
   position: absolute;
   top: 50%; left: 0; right: 0;
-  height: 2px;
-  transform: translateY(-1px);
-  background: rgba(0, 0, 0, .55);
-  z-index: 6;
+  height: 1px;
+  transform: translateY(-.5px);
+  background: #1f2937;
+  z-index: 9;
 }
 
 .half, .leaf {
@@ -221,7 +223,7 @@ body.mode-flip .flip-view { display: flex; }
   height: 50%;
   overflow: hidden;
   backface-visibility: hidden;
-  background: linear-gradient(#2c2c31, #222227);
+  background: #1f2937;
 }
 .half .num, .leaf .num {
   position: absolute;
@@ -237,19 +239,32 @@ body.mode-flip .flip-view { display: flex; }
 .half.bottom { bottom: 0; border-radius: 0 0 10px 10px; transform-origin: 50% 0%; }
 .half.bottom .num { top: -100%; }
 .half.top { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); }
-.half.bottom { background: linear-gradient(#202025, #17171b); }
 
-/* 落页阴影：页面砸下时下半闪现暗影 */
-.half.bottom::after {
-  content: '';
+/* 翻页三层阴影：随翻页进度对称淡入淡出（仿实体翻页钟） */
+.sh {
   position: absolute;
   inset: 0;
-  background: #000;
   opacity: 0;
   pointer-events: none;
 }
-.fcard.impact .half.bottom::after { animation: shockFade .26s ease-out; }
-@keyframes shockFade { 0% { opacity: .5; } 100% { opacity: 0; } }
+.sh.bot {
+  z-index: 4; /* 翻页叶之下 */
+  background: linear-gradient(0deg, rgba(0, 0, 0, .2), rgba(0, 0, 0, .1) 30%, transparent);
+}
+.sh.mid {
+  z-index: 7;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .12) 40%, rgba(0, 0, 0, .6) 50%, rgba(0, 0, 0, .12) 60%, transparent);
+}
+.sh.dark {
+  z-index: 8;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .35) 45%, rgba(0, 0, 0, .65) 50%, rgba(0, 0, 0, .35) 55%, transparent);
+}
+.fcard.sh-run .sh.bot  { animation: shBot var(--flipDur) ease-in-out; }
+.fcard.sh-run .sh.mid  { animation: shMid var(--flipDur) ease-in-out; }
+.fcard.sh-run .sh.dark { animation: shDark var(--flipDur) ease-in-out; }
+@keyframes shMid  { 0% { opacity: 0; } 50% { opacity: .5; } 100% { opacity: 0; } }
+@keyframes shDark { 0% { opacity: 0; } 50% { opacity: .6; } 100% { opacity: 0; } }
+@keyframes shBot  { 0% { opacity: 0; } 50% { opacity: .3; } 100% { opacity: 0; } }
 
 .leaf {
   visibility: hidden;
@@ -265,24 +280,18 @@ body.mode-flip .flip-view { display: flex; }
 }
 .leafTop .face.front {
   border-radius: 10px 10px 0 0;
-  background: linear-gradient(#2c2c31, #222227);
-}
-.leafTop .face.front .num {
-  position: absolute;
-  left: 0; width: 100%; height: 200%;
-  display: flex; align-items: center; justify-content: center;
+  background: #1f2937;
 }
 .leafTop .face.back {
   transform: rotateX(180deg);
   border-radius: 10px 10px 0 0;
-  background: linear-gradient(#1a1a1f, #232329);
+  background: #1f2937;
 }
-.leafTop.run-t { visibility: visible; animation: flipTop .45s cubic-bezier(.55, .06, .68, .19) forwards; }
-/* 翻落时中途变暗（页面遮挡背光），落到 180° 平铺在下层上 */
+.leafTop .face.back .num { top: -100%; } /* 背面露字形下半带：落位即新值下半 */
+.leafTop.run-t { visibility: visible; animation: flipTop var(--flipDur) ease-in-out forwards; }
 @keyframes flipTop {
   0%   { transform: rotateX(0); }
-  55%  { filter: brightness(.42); }
-  100% { transform: rotateX(-180deg); filter: brightness(.7); }
+  100% { transform: rotateX(-180deg); }
 }
 
 .flip-colon {
