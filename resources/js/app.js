@@ -273,7 +273,7 @@ window.addEventListener('mousedown', pokeControls);
 window.addEventListener('keydown', pokeControls);
 pokeControls();
 
-/* ---- 全屏（borderless，无任何系统边框/标题栏） ---- */
+/* ---- 全屏（窗口常驻无边框，全屏仅控制是否覆盖任务栏） ---- */
 async function isFullScreen() {
   if (!HAS_NL) return !!document.fullscreenElement;
   try { return await Neutralino.window.isFullScreen(); } catch (e) { return false; }
@@ -281,8 +281,9 @@ async function isFullScreen() {
 
 async function enterFullScreen() {
   if (HAS_NL) {
-    await Neutralino.window.setBorderless(true);
     await Neutralino.window.setFullScreen();
+    // 保险：确认边框已移除
+    await Neutralino.window.setBorderless(true);
   } else {
     await document.documentElement.requestFullscreen();
   }
@@ -291,7 +292,7 @@ async function enterFullScreen() {
 async function exitFullScreen() {
   if (HAS_NL) {
     await Neutralino.window.exitFullScreen();
-    await Neutralino.window.setBorderless(false);
+    await Neutralino.window.setBorderless(true);
   } else {
     await document.exitFullscreen();
   }
