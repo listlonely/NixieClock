@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
   "applicationId": "js.neutralino.nixieclock",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "defaultMode": "window",
   "port": 0,
   "documentRoot": "/resources/",
@@ -31,7 +31,8 @@
       "icon": "/resources/icons/appIcon.png",
       "enableInspector": false,
       "borderless": true,
-      "maximize": true,
+      "maximize": false,
+      "useSavedState": false,
       "hidden": false,
       "resizable": true,
       "exitProcessOnClose": true

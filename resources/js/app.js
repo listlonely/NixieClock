@@ -6,7 +6,7 @@ const HAS_NL = typeof window.NL_PORT !== 'undefined';
 if (HAS_NL) Neutralino.init();
 
 /* ============ 顶部常量（按需修改） ============ */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 // 版本清单 URL：返回 JSON {"version":"1.1.0","url":"https://.../下载页"}；留空则提示未配置
 const UPDATE_URL = '';
 const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
@@ -306,9 +306,19 @@ async function toggleFullScreen() {
   setTimeout(updateFullBtn, 300);
 }
 
+let fsState = false; // 当前是否真全屏（拖拽逻辑用）
+
 async function updateFullBtn() {
-  $('#btnFull').classList.toggle('on', await isFullScreen());
+  fsState = await isFullScreen();
+  $('#btnFull').classList.toggle('on', fsState);
 }
+
+/* ---- 无边框窗口拖拽：按住空白处即可移动窗口（全屏时忽略） ---- */
+window.addEventListener('mousedown', (e) => {
+  if (e.button !== 0 || fsState) return;
+  if (e.target.closest('#controls, #toast')) return;
+  if (HAS_NL) Neutralino.window.drag().catch(() => {});
+});
 
 window.addEventListener('dblclick', (e) => {
   if (e.target.closest('#controls')) return;

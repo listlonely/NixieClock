@@ -11,7 +11,11 @@
 
 从 [Releases](https://github.com/listlonely/NixieClock/releases) 下载 `NixieClock.exe`，双击即用。
 
-启动即为无边框全屏；点窗口下方控制条的「全屏」可切换铺满 / 恢复。
+启动即为 1100x640 无边框小窗（居中）。按住窗口空白处可直接拖动位置，双击空白处或点「全屏」铺满屏幕；任务栏可正常最小化/恢复。
+
+### 不希望记忆窗口状态？
+
+程序不再记忆上次窗口状态（useSavedState 已禁用），每次启动均为同样的小窗。如需其他启动尺寸，可在快捷方式后附加 Neutralino 参数（如 `--window-width=800 --window-height=500`）。
 
 ## 已知限制：Windows Smart App Control（SAC）
 
@@ -19,16 +23,6 @@
 
 - 存量 Windows 10、升级安装的 Windows 11 等无 SAC 的环境不受影响，可正常使用
 - SAC 用户暂时无法运行，需等后续接入代码签名（如 Azure Trusted Signing）后再发布
-
-## 小窗启动（推荐）
-
-直接双击 exe 会以上次关闭时的状态启动（可能为全屏）。若希望以小窗打开，可创建快捷方式并附加参数：
-
-```powershell
-NixieClock.exe --window-use-saved-state=false --window-maximize=false
-```
-
-说明：Neutralino 会记忆上次窗口状态（useSavedState），该记忆优先于配置文件；上述参数禁用记忆并强制非最大化，启动为 1100x640 居中小窗。
 
 ## 跨屏移动
 
