@@ -25,6 +25,8 @@ body.mode-nixie {
 
 body.mode-flip {
   --accent: #b9bec8;
+  --seg-on: #e9ebf0;
+  --seg-off: rgba(233, 235, 240, .06);
   background: radial-gradient(ellipse at 50% 0%, #26262b 0%, #161619 55%, #0d0d10 100%);
 }
 
@@ -195,10 +197,11 @@ body.mode-flip .flip-view { display: flex; }
   position: relative;
   width: var(--cardW);
   height: var(--cardH);
-  font-weight: 700;
-  font-size: calc(var(--cardH) * .58);
-  color: #eceef2;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
+}
+/* 翻页卡七段码：与辉光管/赛博同一套分段形状 */
+.fcard .digit svg {
+  height: calc(var(--cardH) * .62);
+  width: auto;
 }
 .fcard::after {
   /* 中缝 */
@@ -231,22 +234,56 @@ body.mode-flip .flip-view { display: flex; }
 }
 .half.top, .leaf.leafTop { top: 0; border-radius: 10px 10px 0 0; transform-origin: 50% 100%; }
 .half.top .num, .leafTop .num { top: 0; }
-.half.bottom, .leaf.leafBottom { bottom: 0; border-radius: 0 0 10px 10px; transform-origin: 50% 0%; }
-.half.bottom .num, .leafBottom .num { top: -100%; }
+.half.bottom { bottom: 0; border-radius: 0 0 10px 10px; transform-origin: 50% 0%; }
+.half.bottom .num { top: -100%; }
 .half.top { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); }
-.half.bottom, .leafBottom { background: linear-gradient(#202025, #17171b); }
+.half.bottom { background: linear-gradient(#202025, #17171b); }
+
+/* 落页阴影：页面砸下时下半闪现暗影 */
+.half.bottom::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+.fcard.impact .half.bottom::after { animation: shockFade .26s ease-out; }
+@keyframes shockFade { 0% { opacity: .5; } 100% { opacity: 0; } }
 
 .leaf {
   visibility: hidden;
   z-index: 5;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .5);
+  transform-style: preserve-3d;
 }
-.leaf.leafBottom { transform: rotateX(90deg); }
-
-.leafTop.run-t    { visibility: visible; animation: flipTop .28s ease-in forwards; }
-.leafBottom.run-b { visibility: visible; animation: flipBottom .3s ease-out forwards; }
-@keyframes flipTop   { from { transform: rotateX(0); }      to { transform: rotateX(-90deg); } }
-@keyframes flipBottom{ from { transform: rotateX(90deg); }  to { transform: rotateX(0); } }
+.leafTop .face {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  backface-visibility: hidden;
+}
+.leafTop .face.front {
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(#2c2c31, #222227);
+}
+.leafTop .face.front .num {
+  position: absolute;
+  left: 0; width: 100%; height: 200%;
+  display: flex; align-items: center; justify-content: center;
+}
+.leafTop .face.back {
+  transform: rotateX(180deg);
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(#1a1a1f, #232329);
+}
+.leafTop.run-t { visibility: visible; animation: flipTop .45s cubic-bezier(.55, .06, .68, .19) forwards; }
+/* 翻落时中途变暗（页面遮挡背光），落到 180° 平铺在下层上 */
+@keyframes flipTop {
+  0%   { transform: rotateX(0); }
+  55%  { filter: brightness(.42); }
+  100% { transform: rotateX(-180deg); filter: brightness(.7); }
+}
 
 .flip-colon {
   height: clamp(110px, 28vmin, 280px);

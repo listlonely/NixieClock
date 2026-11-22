@@ -6,7 +6,7 @@ const HAS_NL = typeof window.NL_PORT !== 'undefined';
 if (HAS_NL) Neutralino.init();
 
 /* ============ 顶部常量（按需修改） ============ */
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.1.2';
 // 版本清单 URL：返回 JSON {"version":"1.1.0","url":"https://.../下载页"}；留空则提示未配置
 const UPDATE_URL = '';
 const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
@@ -79,10 +79,19 @@ function makeFlipCard() {
   card.className = 'fcard';
   card.dataset.v = '0';
   card.innerHTML =
-    '<div class="half top"><div class="num">0</div></div>' +
-    '<div class="half bottom"><div class="num">0</div></div>' +
-    '<div class="leaf leafTop"><div class="num">0</div></div>' +
-    '<div class="leaf leafBottom"><div class="num">0</div></div>';
+    '<div class="half top"><div class="num"></div></div>' +
+    '<div class="half bottom"><div class="num"></div></div>' +
+    '<div class="leaf leafTop"><div class="face front"><div class="num"></div></div><div class="face back"></div></div>';
+  // 三个显示位使用与辉光管/赛博一致的七段码
+  card._dTop = makeDigit();
+  card._dBot = makeDigit();
+  card._dLeaf = makeDigit();
+  card.querySelector('.half.top .num').appendChild(card._dTop);
+  card.querySelector('.half.bottom .num').appendChild(card._dBot);
+  card.querySelector('.face.front .num').appendChild(card._dLeaf);
+  setDigit(card._dTop, '0');
+  setDigit(card._dBot, '0');
+  setDigit(card._dLeaf, '0');
   return card;
 }
 
@@ -92,37 +101,26 @@ function setFlip(card, nv) {
   card.dataset.v = nv;
 
   const lt = card.querySelector('.leafTop');
-  const lb = card.querySelector('.leafBottom');
-  const numTop = card.querySelector('.half.top .num');
-  const numBot = card.querySelector('.half.bottom .num');
 
   clearTimeout(card._t1);
   clearTimeout(card._t2);
   // 中断进行中的动画，直接落位
   lt.classList.remove('run-t');
-  lb.classList.remove('run-b');
-  lb.style.visibility = 'hidden';
+  card.classList.remove('impact');
 
-  // 阶段一：上半叶（新值上半）向下翻
-  lt.querySelector('.num').textContent = nv;
+  // 单页 180° 翻落：页面正面是新值上半，90° 后露出背面
+  setDigit(card._dLeaf, nv);
   void lt.offsetWidth; // 重启动画
   lt.classList.add('run-t');
 
   card._t1 = setTimeout(() => {
-    numTop.textContent = nv;
-    numBot.textContent = nv;
+    // 页面落位：静态层换新值 + 落页阴影闪现
+    setDigit(card._dTop, nv);
+    setDigit(card._dBot, nv);
     lt.classList.remove('run-t');
-    lt.style.visibility = 'hidden';
-    // 阶段二：下半叶（新值下半）展开
-    lb.querySelector('.num').textContent = nv;
-    void lb.offsetWidth;
-    lb.classList.add('run-b');
-  }, 280);
-
-  card._t2 = setTimeout(() => {
-    lb.classList.remove('run-b');
-    lb.style.visibility = 'hidden';
-  }, 600);
+    card.classList.add('impact');
+    card._t2 = setTimeout(() => card.classList.remove('impact'), 260);
+  }, 450);
 }
 
 const flipCards = [];
@@ -197,6 +195,9 @@ document.querySelectorAll('.mode-btn').forEach((b) =>
 let saved = 'nixie';
 try { saved = localStorage.getItem('nixie-mode') || 'nixie'; } catch (e) { /* ignore */ }
 if (!MODES.includes(saved)) saved = 'nixie';
+// URL ?mode= 可强制指定初始模式（调试/截图用）
+const qMode = new URLSearchParams(location.search).get('mode');
+if (qMode && MODES.includes(qMode)) saved = qMode;
 
 /* ============================================================
    赛博模式：数字雨（低密度 30fps）+ 故障闪烁
