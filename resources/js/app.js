@@ -109,6 +109,15 @@ function tick() {
 setInterval(tick, 200);
 tick();
 
+// 翻页卡绘制驱动：WebView 下 FlipFlow 卡片组件的内部 interval 可能部分静默，
+// 由宿主 200ms 节拍统一驱动各卡重绘（组件内有 flipping 守卫，频率安全）
+setInterval(function () {
+  try {
+    var dw = flipFrame.contentWindow && flipFrame.contentWindow.__nxDraw;
+    if (dw) for (var k in dw) dw[k]();
+  } catch (err) { /* iframe 未就绪 */ }
+}, 200);
+
 // 恢复可见瞬间：节流期间动画时钟可能错乱，立即收敛刷新
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
