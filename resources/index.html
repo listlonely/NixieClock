@@ -24,16 +24,9 @@
       </div>
     </div>
 
-    <!-- 翻页钟视图 -->
+    <!-- 翻页钟视图：内嵌 FlipFlow（本地化整包） -->
     <div class="flip-view view" id="flipView">
-      <div class="flip-row">
-        <div class="flip-group" id="flipHour"></div>
-        <div class="flip-colon" id="flipColon"><i></i><i></i></div>
-        <div class="flip-group" id="flipMin"></div>
-        <div class="flip-spacer"></div>
-        <div class="flip-group small" id="flipSec"></div>
-      </div>
-      <div class="flip-date" id="flipDate"></div>
+      <iframe id="flipFrame" src="flipflow/clock.html" title="翻页时钟"></iframe>
     </div>
 
   </div>

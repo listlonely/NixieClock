@@ -6,9 +6,7 @@ const HAS_NL = typeof window.NL_PORT !== 'undefined';
 if (HAS_NL) Neutralino.init();
 
 /* ============ 顶部常量（按需修改） ============ */
-const APP_VERSION = '1.1.8';
-// 翻页动画时长（与 CSS 中 --flipDur 保持一致）
-const FLIP_MS = 600;
+const APP_VERSION = '1.2.0';
 // 版本清单 URL：返回 JSON {"version":"1.1.0","url":"https://.../下载页"}；留空则提示未配置
 const UPDATE_URL = '';
 const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
@@ -74,65 +72,6 @@ const segDigits = [];
 }
 
 /* ============================================================
-   翻页卡渲染器
-   ============================================================ */
-function makeFlipCard() {
-  const card = document.createElement('div');
-  card.className = 'fcard';
-  card.dataset.v = '0';
-  card._landAt = 0; // 翻页落位时刻（0=无待落位）
-  card.innerHTML =
-    '<div class="half top"><div class="num"></div></div>' +
-    '<div class="half bottom"><div class="num"></div></div>' +
-    '<div class="sh bot"></div>' +
-    '<div class="leaf leafTop"><div class="face front"><div class="num"></div></div><div class="face back"><div class="num"></div></div></div>' +
-    '<div class="sh mid"></div>' +
-    '<div class="sh dark"></div>';
-  // 四个显示位使用与辉光管/赛博一致的七段码
-  card._dTop = makeDigit();   // 静态上半：翻页开始即换新值
-  card._dBot = makeDigit();   // 静态下半：落位后才换新值
-  card._dFront = makeDigit(); // 翻页叶正面：旧值上半
-  card._dBack = makeDigit();  // 翻页叶背面：新值下半
-  card.querySelector('.half.top .num').appendChild(card._dTop);
-  card.querySelector('.half.bottom .num').appendChild(card._dBot);
-  card.querySelector('.face.front .num').appendChild(card._dFront);
-  card.querySelector('.face.back .num').appendChild(card._dBack);
-  [card._dTop, card._dBot, card._dFront, card._dBack].forEach((d) => setDigit(d, '0'));
-  return card;
-}
-
-function setFlip(card, nv) {
-  const cur = card.dataset.v;
-  if (nv === cur) return;
-  // 上一次翻转若未落位，先把静态下半补齐为上次目标值，避免上下半错位闪断
-  if (card._landAt) setDigit(card._dBot, cur);
-  card.dataset.v = nv;
-
-  const lt = card.querySelector('.leafTop');
-  lt.classList.remove('run-t');
-  card.classList.remove('sh-run');
-
-  // 经典翻页：叶正面=旧值上半，叶背面=新值下半
-  // 静态上半保持旧值直到落位（叶转至 90° 侧棱近乎隐形时，露出的应是完整旧值，
-  // 若此处提前换新值会出现"新上半+旧下半"的乱码，与机械翻页钟不一致）
-  setDigit(card._dFront, cur);
-  setDigit(card._dBack, nv);
-  void lt.offsetWidth; // 重启动画
-  lt.classList.add('run-t');
-  card.classList.add('sh-run');
-  // 落位由 tick 统一收敛：setTimeout 在窗口被遮挡/后台节流时不可靠，会导致翻页叶卡住、下半停留旧值
-  card._landAt = Date.now() + FLIP_MS;
-}
-
-const flipCards = [];
-for (const groupId of ['flipHour', 'flipMin', 'flipSec']) {
-  const g = document.getElementById(groupId);
-  const pair = [makeFlipCard(), makeFlipCard()];
-  pair.forEach((c) => g.appendChild(c));
-  flipCards.push(pair);
-}
-
-/* ============================================================
    时钟节拍
    ============================================================ */
 const WEEK_CN = '日一二三四五六';
@@ -140,21 +79,10 @@ const p2 = (n) => String(n).padStart(2, '0');
 const segView = $('#segView');
 
 let lastSec = -1;
+// 翻页模式 iframe 内的日期元素（iframe load 时创建）
+let flipDateEl = null;
 
 function tick() {
-  // 落位收敛放在最前：每 200ms 都检查，不依赖秒变化（秒变化检查会被 early-return 拦截，延迟可达 1 秒）
-  const ms = Date.now();
-  for (const c of flipCards.flat()) {
-    if (c._landAt && ms >= c._landAt) {
-      c._landAt = 0;
-      // 落位瞬间上下半一起换新值：中段全程显示完整旧值，杜绝乱码观感
-      setDigit(c._dTop, c.dataset.v);
-      setDigit(c._dBot, c.dataset.v);
-      c.querySelector('.leafTop').classList.remove('run-t');
-      c.classList.remove('sh-run');
-    }
-  }
-
   const now = new Date();
   const h = p2(now.getHours());
   const m = p2(now.getMinutes());
@@ -163,24 +91,30 @@ function tick() {
   if (!changed && lastSec !== -1) return;
   lastSec = s;
 
-  const bodyMode = document.body.classList.contains('mode-flip') ? 'flip' : 'seg';
-  if (bodyMode === 'flip') {
-    const chars = h + m + s;
-    flipCards.forEach((pair, i) => {
-      setFlip(pair[0], chars[i * 2]);
-      setFlip(pair[1], chars[i * 2 + 1]);
-    });
-  } else {
-    const chars = h + m + s;
-    segDigits.forEach((d, i) => setDigit(d, chars[i]));
-  }
+  const chars = h + m + s;
+  segDigits.forEach((d, i) => setDigit(d, chars[i]));
 
   const dateStr = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())} 星期${WEEK_CN[now.getDay()]}`;
   $('#segDate').textContent = dateStr;
-  $('#flipDate').textContent = dateStr;
+  // 翻页模式：更新 iframe 内日期文本，并跟随卡片位置（随窗口尺寸/缩放设置变化）
+  if (flipDateEl) {
+    flipDateEl.textContent = dateStr;
+    try {
+      if (!flipDateEl._timer) flipDateEl._timer = flipFrame.contentDocument.querySelector('.timer');
+      const t = flipDateEl._timer;
+      if (t) flipDateEl.style.top = (t.getBoundingClientRect().bottom + 16) + 'px';
+    } catch (err) { /* iframe 未就绪 */ }
+  }
 }
 setInterval(tick, 200);
 tick();
+
+// 恢复可见瞬间：节流期间动画时钟可能错乱，立即收敛刷新
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  lastSec = -1;
+  tick();
+});
 
 /* ============================================================
    模式切换
@@ -209,8 +143,12 @@ document.querySelectorAll('.mode-btn').forEach((b) =>
 let saved = 'nixie';
 try { saved = localStorage.getItem('nixie-mode') || 'nixie'; } catch (e) { /* ignore */ }
 if (!MODES.includes(saved)) saved = 'nixie';
-// URL ?mode= 可强制指定初始模式（调试/截图用）
-const qMode = new URLSearchParams(location.search).get('mode');
+// URL ?mode= 或命令行 ?mode= 参数可强制指定初始模式（调试/截图用）
+let qMode = new URLSearchParams(location.search).get('mode');
+if (!qMode && HAS_NL && Array.isArray(window.NL_ARGS)) {
+  const m = window.NL_ARGS.find((a) => /mode=[a-z]+/i.test(a));
+  if (m) qMode = (m.match(/mode=([a-z]+)/i) || [])[1];
+}
 if (qMode && MODES.includes(qMode)) saved = qMode;
 
 /* ============================================================
@@ -345,6 +283,49 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     isFullScreen().then((fs) => { if (fs) exitFullScreen(); });
   }
+});
+
+/* ---- 翻页模式 iframe 事件转发 ----
+   iframe 铺满视口后吞掉全部鼠标/键盘事件，控制条唤出、窗口拖拽、
+   F11/ESC 快捷键需绑定到 iframe 内部文档（本地页同源可访问） */
+const flipFrame = $('#flipFrame');
+flipFrame.addEventListener('load', () => {
+  let doc;
+  try { doc = flipFrame.contentDocument; } catch (err) { return; }
+  if (!doc) return;
+  try {
+    // 主题对齐：让 FlipFlow 页面底色透明（透出主应用暗色渐变），控件改为同族暗色；
+    // 隐藏其左下角自带全屏按钮（与主应用控制条冗余）
+    const st = doc.createElement('style');
+    st.textContent =
+      '.bg{background:transparent!important}' +
+      '.time-panel{background-color:#2a2f3b!important}' +
+      '.scroll-box{background-color:#20242e!important;color:#e9ecf5!important}' +
+      'button[style*="bottom"]{display:none!important}';
+    (doc.head || doc.documentElement).appendChild(st);
+    // 日期显示（样式对齐辉光管/赛博的 seg-date：同字号、同字距、同灰色）
+    flipDateEl = doc.createElement('div');
+    flipDateEl._timer = null;
+    flipDateEl.style.cssText =
+      'position:fixed;left:50%;transform:translateX(-50%);letter-spacing:.3em;' +
+      'color:#85858e;font-family:"Segoe UI","Microsoft YaHei",sans-serif;' +
+      'font-size:clamp(13px,2vmin,20px);white-space:nowrap;z-index:5;pointer-events:none';
+    doc.body.appendChild(flipDateEl);
+    doc.addEventListener('mousemove', pokeControls);
+    doc.addEventListener('mousedown', (e) => {
+      pokeControls();
+      if (e.button !== 0 || fsState) return;
+      // 排除 FlipFlow 自身交互元素（按钮/设置面板等），其余空白处均可拖动窗口
+      if (e.target.closest && e.target.closest('svg, button, a, input, select, textarea, .set_box, .pickItem')) return;
+      if (HAS_NL) Neutralino.window.beginDrag(e.screenX, e.screenY).catch(() => {});
+    });
+    doc.addEventListener('keydown', (e) => {
+      if (e.key === 'F11') { e.preventDefault(); toggleFullScreen(); }
+      if (e.key === 'Escape') {
+        isFullScreen().then((fs) => { if (fs) exitFullScreen(); });
+      }
+    });
+  } catch (err) { /* 未就绪/受限时忽略 */ }
 });
 
 $('#btnFull').addEventListener('click', toggleFullScreen);

@@ -6,6 +6,10 @@ dist/
 
 # 打包后的交付物（通过 GitHub Releases 分发，不入库）
 NixieClock.exe
+resources.neu
+
+# 测试截图（本地验证用）
+.screenshots/
 
 # Neutralino 客户端库（neu update 下载）
 resources/js/neutralino.js

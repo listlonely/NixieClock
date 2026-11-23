@@ -24,11 +24,11 @@ body.mode-nixie {
 }
 
 body.mode-flip {
-  --accent: #b9bec8;
-  --seg-on: #fff;
-  --seg-off: rgba(255, 255, 255, .06);
-  /* 与 clockhub 翻页钟一致：纯黑背景，窗口/全屏观感一致 */
-  background: #000;
+  --accent: #b9c2d6;
+  --seg-on: #e9ecf5;
+  --seg-off: rgba(233, 236, 245, .06);
+  /* 与辉光管/赛博同构的暗色渐变底（中性微蓝，衬托银白辉光翻页卡） */
+  background: radial-gradient(ellipse at 50% 45%, #12141b 0%, #0a0b10 55%, #050507 100%);
 }
 
 body.mode-cyber {
@@ -170,146 +170,21 @@ body.mode-nixie .crt-overlay { display: block; }
 }
 
 /* ============================================================
-   翻页钟视图
+   翻页钟视图：内嵌 FlipFlow 本地页（iframe 铺满整个视口）
    ============================================================ */
 .flip-view {
   display: none;
-  flex-direction: column;
-  align-items: center;
+  width: 100%;
+  height: 100%;
 }
 body.mode-flip .flip-view { display: flex; }
 
-.flip-row {
-  display: flex;
-  align-items: center;
-  gap: 1.8vmin;
-}
-
-.flip-group {
-  display: flex;
-  gap: 1.4vmin;
-  --cardH: clamp(110px, 28vmin, 280px);
-  --cardW: calc(var(--cardH) * .64);
-  --flipDur: .6s; /* 翻页动画时长（与 app.js FLIP_MS 保持一致，主流翻牌实现 0.6s） */
-  perspective: calc(var(--cardH) * 4);
-}
-.flip-group.small { --cardH: clamp(52px, 13vmin, 130px); }
-
-.fcard {
-  position: relative;
-  width: var(--cardW);
-  height: var(--cardH);
-}
-/* 翻页卡七段码：与辉光管/赛博同一套分段形状 */
-.fcard .digit svg {
-  height: calc(var(--cardH) * .62);
-  width: auto;
-}
-/* 不设中缝切线：任何横线都会切断亮起的 g 段；翻页质感由三层阴影表达 */
-
-.half, .leaf {
-  position: absolute;
-  left: 0;
+.flip-view iframe {
+  flex: 1;
   width: 100%;
-  height: 50%;
-  overflow: hidden;
-  backface-visibility: hidden;
-  background: #1f2937;
-}
-.half .num, .leaf .num {
-  position: absolute;
-  left: 0;
-  width: 100%;
-  height: 200%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.half.top, .leaf.leafTop { top: 0; border-radius: 10px 10px 0 0; transform-origin: 50% 100%; }
-.half.top .num, .leafTop .num { top: 0; }
-.half.bottom { bottom: 0; border-radius: 0 0 10px 10px; transform-origin: 50% 0%; }
-.half.bottom .num { top: -100%; }
-.half.top { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); }
-
-/* 翻页三层阴影：随翻页进度对称淡入淡出（仿实体翻页钟） */
-.sh {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-.sh.bot {
-  z-index: 4; /* 翻页叶之下 */
-  background: linear-gradient(0deg, rgba(0, 0, 0, .2), rgba(0, 0, 0, .1) 30%, transparent);
-}
-.sh.mid {
-  z-index: 7;
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .12) 40%, rgba(0, 0, 0, .6) 50%, rgba(0, 0, 0, .12) 60%, transparent);
-}
-.sh.dark {
-  z-index: 8;
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .35) 45%, rgba(0, 0, 0, .65) 50%, rgba(0, 0, 0, .35) 55%, transparent);
-}
-.fcard.sh-run .sh.bot  { animation: shBot var(--flipDur) ease-in-out; }
-.fcard.sh-run .sh.mid  { animation: shMid var(--flipDur) ease-in-out; }
-.fcard.sh-run .sh.dark { animation: shDark var(--flipDur) ease-in-out; }
-/* 阴影峰值约减半：翻页中段只留轻微折痕明暗，避免小卡看起来像乱码 */
-@keyframes shMid  { 0% { opacity: 0; } 50% { opacity: .25; } 100% { opacity: 0; } }
-@keyframes shDark { 0% { opacity: 0; } 50% { opacity: .32; } 100% { opacity: 0; } }
-@keyframes shBot  { 0% { opacity: 0; } 50% { opacity: .22; } 100% { opacity: 0; } }
-
-.leaf {
-  visibility: hidden;
-  z-index: 5;
-  transform-style: preserve-3d;
-}
-.leafTop .face {
-  position: absolute;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
-  overflow: hidden;
-  backface-visibility: hidden;
-}
-.leafTop .face.front {
-  border-radius: 10px 10px 0 0;
-  background: #1f2937;
-  /* 折缝处受光高亮：让翻页叶读作"一张卡"而非两半错拼的乱字 */
-  box-shadow: inset 0 -3px 8px rgba(255, 255, 255, .14);
-}
-.leafTop .face.back {
-  transform: rotateX(180deg);
-  border-radius: 10px 10px 0 0;
-  background: #1f2937;
-}
-.leafTop .face.back .num { top: -100%; } /* 背面露字形下半带：落位即新值下半 */
-.leafTop.run-t { visibility: visible; animation: flipTop var(--flipDur) ease-in-out forwards; }
-@keyframes flipTop {
-  0%   { transform: rotateX(0); }
-  100% { transform: rotateX(-180deg); }
-}
-
-.flip-colon {
-  height: clamp(110px, 28vmin, 280px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 22%;
-}
-.flip-colon i {
-  width: 1.4vmin;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: #57575e;
-  animation: colonPulse 2s ease-in-out infinite;
-}
-
-.flip-spacer { width: calc(clamp(110px, 28vmin, 280px) * .3); }
-
-.flip-date {
-  margin-top: 4vmin;
-  font-size: clamp(13px, 2vmin, 20px);
-  letter-spacing: .3em;
-  color: #85858e;
+  height: 100%;
+  border: 0;
+  background: transparent; /* 透出主应用暗色渐变背景 */
 }
 
 /* ============================================================
